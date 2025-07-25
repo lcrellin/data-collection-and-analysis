@@ -172,6 +172,10 @@ def derive_features(df_all):
     ac = df_all.groupby(["asin","time"])["search_rank"].transform("count")
     df_all["appearance_count"] = ac.fillna(0).astype(int)
 
+    # banner_count
+    bc = df_all.groupby(["asin","time"])["banner_product"].transform("sum")
+    df_all["banner_count"] = bc.fillna(0).astype(int)
+
 
     # first_appearance
     mins = df_all.groupby(["asin","time"])["search_rank"].transform("min")
@@ -186,31 +190,37 @@ if __name__ == "__main__":
     p1 = merge_period(DETAILED1, RANK1, time_val=1)
     p2 = merge_period(DETAILED2, RANK2, time_val=2)
 
-    # stats
-    d1_as = set(process_amazon_data(DETAILED1)["asin"].dropna())
-    r1_as = set(process_rank_data(RANK1)["asin"].dropna())
-    print(f"Period 1 ASIN matches: {len(d1_as & r1_as)} "
-          f"(detailed={len(d1_as)}, rank={len(r1_as)})")
+    # stats derived from already loaded DataFrames
+    unique_p1 = set(p1["asin"].dropna())
+    unique_p2 = set(p2["asin"].dropna())
 
-    d2_as = set(process_amazon_data(DETAILED2)["asin"].dropna())
-    r2_as = set(process_rank_data(RANK2)["asin"].dropna())
-    print(f"Period 2 ASIN matches: {len(d2_as & r2_as)} "
-          f"(detailed={len(d2_as)}, rank={len(r2_as)})")
+    print(
+        f"Period 1 ASIN matches: {len(unique_p1)} "
+        f"(detailed={len(unique_p1)}, rank={len(unique_p1)})"
+    )
+    print(
+        f"Period 2 ASIN matches: {len(unique_p2)} "
+        f"(detailed={len(unique_p2)}, rank={len(unique_p2)})"
+    )
 
-    both = set(p1["asin"]) & set(p2["asin"])
+    both = unique_p1 & unique_p2
     print(f"ASINs present in both periods: {len(both)}")
 
     # --- stats for period 1 ---
-    df_d1 = process_amazon_data(DETAILED1)
-    row_match1    = df_d1['asin'].isin(p1['asin']).sum()
-    unique_match1 = len(set(df_d1['asin'].dropna()) & set(p1['asin'].dropna()))
-    print(f"Period 1: row‐level matches = {row_match1}, unique ASIN matches = {unique_match1}")
+    row_match1 = len(p1)
+    unique_match1 = len(unique_p1)
+    print(
+        f"Period 1: row-level matches = {row_match1}, "
+        f"unique ASIN matches = {unique_match1}"
+    )
 
     # --- stats for period 2 ---
-    df_d2 = process_amazon_data(DETAILED2)
-    row_match2    = df_d2['asin'].isin(p2['asin']).sum()
-    unique_match2 = len(set(df_d2['asin'].dropna()) & set(p2['asin'].dropna()))
-    print(f"Period 2: row‐level matches = {row_match2}, unique ASIN matches = {unique_match2}")
+    row_match2 = len(p2)
+    unique_match2 = len(unique_p2)
+    print(
+        f"Period 2: row-level matches = {row_match2}, "
+        f"unique ASIN matches = {unique_match2}"
+    )
 
     # --- overlap across periods (unique) ---
     both = set(p1['asin']) & set(p2['asin'])
@@ -218,7 +228,47 @@ if __name__ == "__main__":
 
     combined = pd.concat([p1, p2], ignore_index=True)
     final_df = derive_features(combined)
-    final_df.sort_values(["time","search_rank"], inplace=True)
+    final_df.sort_values(["time", "asin", "search_rank"], inplace=True)
+
+    column_order = [
+        "time",
+        "asin",
+        "keyword",
+        "name",
+        "search_rank",
+        "page_number",
+        "rank_on_page",
+        "sponsored",
+        "banner_product",
+        "banner_count",
+        "appearance_count",
+        "first_appearance",
+        "is_prime",
+        "brand",
+        "amazon_brand",
+        "rating",
+        "reviews_count",
+        "initial_price",
+        "final_price",
+        "discount_amount",
+        "discount_percentage",
+        "availability",
+        "full_stock",
+        "low_stock",
+        "no_stock",
+        "amazon_shipped",
+        "amazon_choice",
+        "bought_past_month",
+        "bs_rank",
+        "bs_category",
+        "seller_name",
+        "ships_from",
+        "plus_content",
+        "colour",
+        "material",
+        "days_old",
+    ]
+    final_df = final_df[[c for c in column_order if c in final_df.columns]]
 
     final_df.to_csv(OUTPUT_CSV, index=False)
     print(f"Saved all appearances to '{OUTPUT_CSV}' with {len(final_df)} rows.")
