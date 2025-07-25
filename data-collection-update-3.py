@@ -12,6 +12,7 @@ every ASIN appearance.
 
 import re, json
 import pandas as pd
+import numpy as np
 from datetime import datetime
 
 # ——— CONFIGURE ———
@@ -158,10 +159,14 @@ def derive_features(df_all):
     df_all["amazon_brand"]   = df_all["brand"].str.contains("Amazon", na=False).astype(int)
 
     # discounts
-    df_all["discount_amount"]     = df_all["initial_price"] - df_all["final_price"]
-    df_all["discount_percentage"] = (
-        df_all["discount_amount"] / df_all["initial_price"]
-    ).fillna(0) * 100
+    df_all["discount_amount"] = df_all["initial_price"] - df_all["final_price"]
+    discount_ratio = np.divide(
+        df_all["discount_amount"],
+        df_all["initial_price"],
+        out=np.zeros(len(df_all), dtype=float),
+        where=df_all["initial_price"].astype(float) != 0,
+    )
+    df_all["discount_percentage"] = pd.Series(discount_ratio, index=df_all.index).fillna(0) * 100
 
     # appearance_count
     ac = df_all.groupby(["asin","time"])["search_rank"].transform("count")
