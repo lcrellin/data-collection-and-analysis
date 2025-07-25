@@ -172,6 +172,10 @@ def derive_features(df_all):
     ac = df_all.groupby(["asin","time"])["search_rank"].transform("count")
     df_all["appearance_count"] = ac.fillna(0).astype(int)
 
+    # banner_count
+    bc = df_all.groupby(["asin","time"])["banner_product"].transform("sum")
+    df_all["banner_count"] = bc.fillna(0).astype(int)
+
 
     # first_appearance
     mins = df_all.groupby(["asin","time"])["search_rank"].transform("min")
@@ -224,7 +228,7 @@ if __name__ == "__main__":
 
     combined = pd.concat([p1, p2], ignore_index=True)
     final_df = derive_features(combined)
-    final_df.sort_values(["time","search_rank"], inplace=True)
+    final_df.sort_values(["time", "asin", "search_rank"], inplace=True)
 
     final_df.to_csv(OUTPUT_CSV, index=False)
     print(f"Saved all appearances to '{OUTPUT_CSV}' with {len(final_df)} rows.")
